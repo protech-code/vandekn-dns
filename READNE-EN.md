@@ -74,6 +74,9 @@ DoH requests return a response with the `application/dns-message` content type. 
 
 The blocklist, whitelist, and upstream DNS source URLs are configured in `src/worker.js`. Edit the corresponding arrays there to change the sources.
 
+### Sponser me
+[https://img.shields.io/badge/sponser-Me-ff69b4?style=for-the-badge&logo=githubsponsors&logoColor=white](https://donate.protechvn.io.vn)
+
 ---
 
 ## License
