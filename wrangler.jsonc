@@ -1,0 +1,34 @@
+{
+  "name": "vandekn-dns",
+  "main": "src/worker.js",
+  "workers_dev": false,
+  "preview_urls": false,
+  "compatibility_date": "2026-08-08",
+  "triggers": {
+    "crons": [
+      "0 0 * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": false,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "kv_namespaces": [
+    {
+      "id": "ec0a1c4619d44390806c455b405d3194",
+      "binding": "ADBLOCK_KV"
+    }
+  ]
+}
