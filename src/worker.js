@@ -1,8 +1,6 @@
-// =========================================================================
-// 1. BIẾN TOÀN CỤC & IN-MEMORY RAM CACHE
-// =========================================================================
+// 1.  IN-MEMORY RAM CACHE
 const memoryCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // Thời gian lưu cache: 5 phút (300,000 ms)
+const CACHE_TTL = 5 * 60 * 1000; // cache saving: 5 minutes (300,000 ms)
 
 const BLOCKLIST_SOURCES = [
   "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
@@ -16,7 +14,7 @@ const WHITELIST_SOURCES = [
   "https://raw.githubusercontent.com/8technologia/adguardhome/refs/heads/main/allowlists.txt"
 ];
 
-// Danh sách các Upstream DNS DoH (Đua tốc độ Race Speed)
+// List of upstream DNS servers for DoH (DNS over HTTPS)
 const UPSTREAMS = [
   "https://cloudflare-dns.com/dns-query",
   "https://dns.google/dns-query"
@@ -25,11 +23,9 @@ const UPSTREAMS = [
 let cachedSet = null;
 let lastCacheTime = 0;
 
-// =========================================================================
 // 2. WORKER MAIN HANDLER
-// =========================================================================
 export default {
-  // Lịch tự động chạy cập nhật Blocklist theo Cron Trigger
+  // Cron job: automatically update blocklists 
   async scheduled(event, env, ctx) {
     ctx.waitUntil(updateBlocklists(env));
   },
@@ -37,23 +33,22 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // 1. Trang chủ /
+    // 1. Home /
     if (url.pathname === "/") {
       return new Response(" Vandekn DNS is ACTIVE!", { status: 200 });
     }
 
-    // 2. Kích hoạt cập nhật thủ công /update
+    // 2. update
     if (url.pathname === "/update") {
       ctx.waitUntil(updateBlocklists(env));
       return new Response("Automated update process for Blocklists and Whitelists in KV has been activated!", { status: 200 });
     }
 
-    // 3. Đường dẫn DoH /dns-query
+    // 3. Link DoH /dns-query
     if (url.pathname !== "/dns-query") {
       return new Response("404 Not Found", { status: 404 });
     }
 
-    // Nếu mở bằng trình duyệt thông thường (không có tham số ?dns=) -> Trả về JSON Healthcheck chuẩn
     if (request.method === "GET" && !url.searchParams.has("dns")) {
       return new Response(JSON.stringify({ Status: 0, Comment: "dns-query" }), {
         status: 200,
@@ -64,16 +59,12 @@ export default {
       });
     }
 
-    // ---------------------------------------------------------------------
-    // BƯỚC A: KIỂM TRA RAM CACHE (Áp dụng cho request GET)
-    // ---------------------------------------------------------------------
     const cacheKey = request.url;
     if (request.method === "GET" && memoryCache.has(cacheKey)) {
       const cachedItem = memoryCache.get(cacheKey);
 
-      // Kiểm tra hạn sử dụng của Cache
+   
       if (Date.now() - cachedItem.timestamp < CACHE_TTL) {
-        // Trả về kết quả từ RAM dưới dạng ArrayBuffer (tốc độ ~0ms)
         return new Response(cachedItem.buffer, {
           status: cachedItem.status,
           headers: {
@@ -86,9 +77,7 @@ export default {
       }
     }
 
-    // ---------------------------------------------------------------------
-    // BƯỚC B: ĐỌC DỮ LIỆU TRUY VẤN DNS & CHECK BLOCKLIST
-    // ---------------------------------------------------------------------
+
     const blockSet = await getBlocklistFromKV(env);
 
     let dnsBuffer = null;
@@ -99,7 +88,7 @@ export default {
       dnsBuffer = await request.arrayBuffer();
     }
 
-    // Check tên miền xem có bị chặn không
+    // Check domain against blocklist
     if (dnsBuffer) {
       const qname = extractQName(dnsBuffer);
 
@@ -114,9 +103,6 @@ export default {
       }
     }
 
-    // ---------------------------------------------------------------------
-    // ⚡ BƯỚC C: GỬI TRUY VẤN TỚI DNS UPSTREAM (RACE SPEED - SIÊU NHANH)
-    // ---------------------------------------------------------------------
     let upstreamResponse = null;
     const searchParams = request.method === "GET" ? url.search : "";
 
@@ -135,16 +121,12 @@ export default {
     };
 
     try {
-      // Đua tốc độ: Server nào phản hồi nhanh nhất (~10-20ms) sẽ được lấy ngay
       upstreamResponse = await Promise.race(UPSTREAMS.map(url => fetchUpstream(url)));
     } catch (err) {
-      // Dự phòng nếu tất cả gặp lỗi -> Dùng Cloudflare mặc định
       upstreamResponse = await fetchUpstream(UPSTREAMS[0]);
     }
 
-    // ---------------------------------------------------------------------
-    // BƯỚC D: ĐỌC BUFFER & LƯU KẾT QUẢ VÀO RAM CACHE CHO LẦN SAU
-    // ---------------------------------------------------------------------
+
     const responseBuffer = await upstreamResponse.arrayBuffer();
     const responseHeaders = {
       "content-type": "application/dns-message",
@@ -157,7 +139,6 @@ export default {
         firstKeys.forEach(k => memoryCache.delete(k));
       }
 
-      // Lưu dưới dạng ArrayBuffer an toàn vào RAM
       memoryCache.set(cacheKey, {
         buffer: responseBuffer,
         status: upstreamResponse.status,
@@ -173,9 +154,7 @@ export default {
   }
 };
 
-// =========================================================================
-// 3. TẢI & GỘP BLOCKLIST + TỰ ĐỘNG BỎ CHẶN WHITELIST ONLINE
-// =========================================================================
+
 async function updateBlocklists(env) {
   console.log("Starting to download Blocklist sources...");
   const mergedBlockSet = new Set();
