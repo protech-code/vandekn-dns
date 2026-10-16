@@ -74,8 +74,8 @@ Các request DoH trả về nội dung kiểu `application/dns-message`. Tên mi
 
 Các URL nguồn blocklist, whitelist và upstream DNS được khai báo trực tiếp trong `src/worker.js`. Điều chỉnh các mảng cấu hình tại đó để thay đổi nguồn sử dụng.
 
-### Sponser me
-[https://img.shields.io/badge/sponser-Me-ff69b4?style=for-the-badge&logo=githubsponsors&logoColor=white](https://donate.protechvn.io.vn)
+### Sponsor me
+[![Sponsor Me](https://img.shields.io/badge/sponsor-Me-ff69b4?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://donate.protechvn.io.vn)
 
 ---
 
